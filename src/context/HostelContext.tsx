@@ -62,7 +62,7 @@ interface HostelContextType {
   advanceDateByDays: (days: number) => void;
   
   onboardTenant: (payload: OnboardTenantPayload) => void;
-  recordPayment: (dueId: string, method: PaymentMethod, amountOverride?: number) => void;
+  recordPayment: (dueId: string, method: PaymentMethod, amountOverride?: number, transactionRefOverride?: string) => void;
   vacateBed: (tenantId: string, maintenanceDeduction: number, notes?: string) => VacateBedResult;
   updateAgreedRent: (tenantId: string, newRent: number) => void;
   rechargeUrjaviMeter: (roomId: string, amountRupees: number) => void;
@@ -295,7 +295,7 @@ export const HostelProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     playOnboardingChime();
   };
 
-  const recordPayment = (dueId: string, method: PaymentMethod, amountOverride?: number) => {
+  const recordPayment = (dueId: string, method: PaymentMethod, amountOverride?: number, transactionRefOverride?: string) => {
     const due = dues.find(d => d.id === dueId);
     if (!due) return;
 
@@ -338,7 +338,7 @@ export const HostelProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       hostelId: due.hostelId,
       amount,
       paymentMethod: method,
-      transactionRef: `${refPrefix}${Date.now().toString().slice(-8)}`,
+      transactionRef: transactionRefOverride || `${refPrefix}${Date.now().toString().slice(-8)}`,
       timestamp: `${currentSimulatedDate} ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`,
       description: `${due.monthLabel} Rent - ${method.replace('_', ' ')}`,
       rentDueId: dueId

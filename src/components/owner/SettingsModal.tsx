@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import { useHostel } from '../../context/HostelContext';
 import { playSoundboxChime } from '../../utils/soundbox';
+import { RAZORPAY_CONFIG } from '../../config/razorpay';
+import { openRazorpayCheckout } from '../../utils/razorpay';
 import type { Language } from '../../types/language';
 import {
   X,
@@ -12,7 +14,9 @@ import {
   ShieldCheck,
   Zap,
   CheckCircle2,
-  Smartphone
+  Smartphone,
+  CreditCard,
+  ExternalLink
 } from 'lucide-react';
 
 interface SettingsModalProps {
@@ -23,6 +27,8 @@ interface SettingsModalProps {
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const { language, setLanguage, t } = useLanguage();
   const { hostels, activeHostelId, beds, rooms } = useHostel();
+  const [isTestingGateway, setIsTestingGateway] = useState(false);
+  const [testGatewayMsg, setTestGatewayMsg] = useState('');
 
   if (!isOpen) return null;
 
@@ -34,6 +40,40 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
   const handleTestSoundbox = () => {
     playSoundboxChime(7200, 'M. Sai Kiran');
+  };
+
+  const handleTestRazorpayGateway = async () => {
+    setIsTestingGateway(true);
+    setTestGatewayMsg('');
+    try {
+      const opened = await openRazorpayCheckout({
+        amountInRupees: 1,
+        hostelName: `${activeHostel.name} (Gateway Test)`,
+        description: 'Razorpay Test API Gateway Verification',
+        customerName: 'Hostel Owner',
+        customerPhone: activeHostel.ownerPhone,
+        notes: {
+          test_run: 'true',
+          key_id: RAZORPAY_CONFIG.keyId
+        },
+        onSuccess: (paymentId) => {
+          setIsTestingGateway(false);
+          setTestGatewayMsg(`Payment captured! ID: ${paymentId}`);
+          playSoundboxChime(1, 'Razorpay Test');
+        },
+        onDismiss: () => {
+          setIsTestingGateway(false);
+        }
+      });
+      if (!opened) {
+        setIsTestingGateway(false);
+        setTestGatewayMsg('Gateway script not available.');
+      }
+    } catch (e) {
+      console.error(e);
+      setIsTestingGateway(false);
+      setTestGatewayMsg('Gateway popup could not be opened.');
+    }
   };
 
   const languages: { code: Language; name: string; nativeName: string; flag: string; desc: string }[] = [
@@ -225,7 +265,59 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
             </div>
           </div>
 
-          {/* Section 4: System Compliance & Integrations */}
+          {/* Section 4: Razorpay Payment Gateway Test API */}
+          <div className="space-y-3 pt-3 border-t border-slate-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CreditCard className="w-4 h-4 text-blue-600" />
+                <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 m-0">
+                  Razorpay Payment Gateway (Test API)
+                </h4>
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full flex items-center gap-1">
+                <CheckCircle2 className="w-3 h-3" />
+                Active Test Mode
+              </span>
+            </div>
+
+            <div className="bg-blue-50/60 p-4 rounded-xl border border-blue-200 space-y-2.5 text-xs">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-600 font-bold">Key ID:</span>
+                <code className="font-mono font-bold text-blue-900 bg-white px-2 py-0.5 rounded border border-blue-200">
+                  {RAZORPAY_CONFIG.keyId}
+                </code>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-600 font-bold">Key Secret:</span>
+                <code className="font-mono text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">
+                  zxitHMR...RF0I (Configured)
+                </code>
+              </div>
+              <div className="flex justify-between items-center text-[11px] text-slate-500 pt-1">
+                <span>Supported Methods:</span>
+                <span className="font-bold text-slate-700">UPI (PhonePe, GPay, Paytm) • Cards • NetBanking</span>
+              </div>
+
+              {testGatewayMsg && (
+                <div className="bg-white p-2 rounded-lg border border-emerald-300 text-emerald-800 text-xs font-bold">
+                  {testGatewayMsg}
+                </div>
+              )}
+
+              <button
+                type="button"
+                disabled={isTestingGateway}
+                onClick={handleTestRazorpayGateway}
+                className="w-full mt-2 py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+              >
+                <Zap className="w-3.5 h-3.5 text-amber-300" />
+                <span>{isTestingGateway ? 'Connecting...' : 'Test Razorpay Gateway Popup (₹1)'}</span>
+                <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+              </button>
+            </div>
+          </div>
+
+          {/* Section 5: System Compliance & Integrations */}
           <div className="space-y-3 pt-3 border-t border-slate-200">
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-purple-600" />
